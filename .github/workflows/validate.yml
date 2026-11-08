@@ -1,0 +1,32 @@
+name: Check skills
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Check skill files
+        run: node scripts/check-skill.mjs
+      - name: Install Throughline 0.0.2 for tests
+        run: npm install --no-save --no-package-lock --ignore-scripts @0xbuff/throughline@0.0.2
+      - name: Test example diagrams
+        run: node scripts/smoke-throughline.mjs
+      - name: Check skills CLI
+        run: npx --yes skills add . --list
+      - name: Verify Claude Code and Codex installation
+        run: |
+          mkdir -p "$RUNNER_TEMP/throughline-skill-check"
+          cd "$RUNNER_TEMP/throughline-skill-check"
+          DISABLE_TELEMETRY=1 npx --yes skills add "$GITHUB_WORKSPACE" --skill throughline -a claude-code -a codex -y
