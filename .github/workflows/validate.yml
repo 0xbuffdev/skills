@@ -27,3 +27,8 @@ jobs:
         run: node scripts/smoke-throughline.mjs
       - name: Check skills CLI discovery
         run: npx --yes skills add . --list
+      - name: Verify Claude Code and Codex installation
+        run: |
+          mkdir -p "$RUNNER_TEMP/throughline-skill-check"
+          cd "$RUNNER_TEMP/throughline-skill-check"
+          DISABLE_TELEMETRY=1 npx --yes skills add "$GITHUB_WORKSPACE" --skill throughline -a claude-code -a codex -y
