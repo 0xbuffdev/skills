@@ -71,3 +71,15 @@ jobs:
           mkdir -p "$RUNNER_TEMP/throughline-skill-check"
           cd "$RUNNER_TEMP/throughline-skill-check"
           DISABLE_TELEMETRY=1 npx --yes skills add "$GITHUB_WORKSPACE" --skill throughline -a claude-code -a codex -y
+      - name: Confirm installed files for both agents
+        run: |
+          for target in \
+            "$RUNNER_TEMP/throughline-skill-check/.agents/skills/throughline" \
+            "$RUNNER_TEMP/throughline-skill-check/.claude/skills/throughline"; do
+            test -f "$target/SKILL.md"
+            test -f "$target/scripts/validate.mjs"
+            test -f "$target/references/grammar.md"
+            for name in flow bindings binary matrix callstack; do
+              test -f "$target/assets/$name.thl"
+            done
+          done
