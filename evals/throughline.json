@@ -1,0 +1,35 @@
+{
+  "skill_name": "throughline",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Create a Throughline Markdown visualization of a request moving from a client to a server, with an initial empty response, a visible transfer, then a response update. Include code to compile it.",
+      "expected_output": "Uses thl flow, predeclares nodes/links, creates distinct explanatory beats, uses send for transfer and set for state mutation, compiles one block, and inspects state across frames.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Use Throughline to show what happens when two variables alias an array and one pushes a value, then rebinds. Write the shortest supported example and explain its limitations.",
+      "expected_output": "Uses thl bindings with supported let/const, reference assignments and push; explains shared object semantics and that const immutability and arbitrary JavaScript are not enforced.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Embed a thl matrix code fence with a live Throughline player next to the source in my React 19/Fumadocs MDX docs. Make it work for multiple fences in one page.",
+      "expected_output": "Explains MDX host extraction, compiles each block independently at build/server time, uses exact root/react/CSS imports, passes Trace to a client wrapper, and does not claim MDX fences auto-render.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Visualize Fibonacci recursion with thl callstack and pass source directly to ThroughlinePlayer with autoplay.",
+      "expected_output": "Rejects nonexistent Fibonacci callstack support and source/autoplay props; uses thl flow to hand-author the concept if appropriate, compile(source) separately, and render ThroughlinePlayer with the compiled trace.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "Debug this Throughline flow where a packet is sent on a hidden link, and I write both x and x[0] in one step. Show a corrected timeline.",
+      "expected_output": "Identifies hidden topology and overlapping writes as compile errors, shows link/node visibility before transfer, splits conflicting writes, and validates the revised flow.",
+      "files": []
+    }
+  ]
+}
