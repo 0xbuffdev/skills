@@ -1,33 +1,48 @@
 ---
 name: throughline
-description: Build, author, validate, debug, document, and integrate Throughline state-trace visualizations using @0xbuff/throughline. Use whenever a task mentions Throughline, thl Markdown fences, state-over-time animations, its five domains (flow, bindings, binary, matrix, callstack), the React player, or embedding Throughline in MDX, Fumadocs, Next.js, or educational content. Apply this skill even when the user asks only for an example, fix, lesson visualization, or integration.
+description: Create, fix, and embed step-by-step Throughline visualizations. Use when writing thl Markdown blocks, showing state changes, teaching algorithms, working with flow, bindings, binary, matrix or callstack diagrams, using @0xbuff/throughline in TypeScript or React, integrating MDX/Fumadocs, or customizing the player.
 ---
 
-# Throughline — agent implementation skill
+# Throughline
 
-Target the published **`@0xbuff/throughline` 0.0.2** contract unless the consuming project has a different installed version. Throughline is a TypeScript/ESM compiler of authored state traces into deterministic frames, with an optional React 19 player. It is not a JavaScript interpreter, an automatic code tracer, or an SVG chart generator.
+Use this skill when someone wants to **show how something changes, one step at a time**, with Throughline. Produce working examples and integrations, not just explanations.
 
-## Reliable execution workflow
+These instructions cover `@0xbuff/throughline` version `0.0.2`. If a project uses another version, confirm its installed exports and types before changing code.
 
-1. **Inspect the consuming project.** Read its `AGENTS.md` instructions and relevant code, determine the installed Throughline version, runtime (Node 24+ for v0.0.2), React version and Markdown/MDX pipeline. Prefer actual package types/exports to guesses. If behavior differs from this skill, inspect the installed package and report the discrepancy.
-2. **Choose the right domain.** Use `flow` for hand-authored concepts, pipelines, protocols, arbitrary algorithms and workflows; `bindings` for the restricted variable/reference/push language; `binary` for unsigned ripple-carry addition; `matrix` for small multiplication; `callstack` for factorial recursion only. Read [domains](references/domains.md) before using a computed domain. Never invent unsupported domains such as `search`, `sort`, `tcp` or `gradient`: they are plans, not v0.0.2 APIs.
-3. **Design the explanation before writing syntax.** Specify the initial state and exact sequence of visible changes. Give each beat one understandable purpose; choose real values and source-grounded notes. Identify what changes, what merely highlights, and whether a transfer should precede or accompany a write.
-4. **Author valid input.** For `flow`, read [grammar](references/grammar.md). Declare all groups/nodes/links first, then named steps. Only write JSON values and supported operations. Use hidden entities/links for future topology. Make diagrams truthful, not merely visually plausible.
-5. **Compile and inspect.** Compile **one** `thl <domain>` block with `compile(source)` (or host-extracted `ThlBlock` with `compileAst(ast)`). Do not pass an entire Markdown document or multiple fences to `compile`. Fail on `ProgramError`, with source-positioned diagnostics where available. Check initial frame, beat count, final values, transfers, visibility and note semantics against the user's intended explanation.
-6. **Integrate the supported surface.** Compiler-only consumers import from `@0xbuff/throughline`. React consumers import `ThroughlinePlayer` from `@0xbuff/throughline/react` and CSS from `@0xbuff/throughline/styles/throughline.css`. For MDX/Fumadocs, implement or reuse an explicit code-block-to-player integration; a syntax-highlighted `thl` fence is *not* interactive by default. Read [integration](references/integration.md).
-7. **Verify and report.** Run typechecking, compilation tests, React/SSR/browser tests as applicable. Distinguish checks that actually ran from examples or suggested commands. Report version assumptions, errors and unverified execution honestly. Use [API and validation](references/api-and-validation.md) for precise exports and assertions.
+## Get started
 
-## Minimal, correct authored trace
+1. Identify what the user wants to show and where it will appear: Markdown, code, React, or a documentation page.
+2. Choose a supported diagram below. Do not invent new diagram types.
+3. Write the source with an initial state and clear named steps.
+4. Compile it with `compile(source)`. Fix errors rather than guessing whether a diagram works.
+5. For an interactive display, use `ThroughlinePlayer` with the compiled result. A `thl` code block does not become a player on its own.
+6. Check the frame count and values; for an app, also check the rendered player, keyboard controls, and styles.
+
+## Pick a diagram
+
+| Name | Use it for |
+| --- | --- |
+| `flow` | A custom process, algorithm, workflow, protocol, or state change |
+| `bindings` | Variables, shared objects, reassignment, and array `push` |
+| `binary` | Addition of two unsigned binary numbers |
+| `matrix` | Multiplication of two small matrices |
+| `callstack` | The calls and returns of factorial recursion |
+
+Use `flow` for everything not supported by the four built-in examples. In version 0.0.2, `callstack` cannot run arbitrary functions, and `bindings` does not interpret general JavaScript.
+
+## Write a first diagram
 
 ~~~markdown
 ```thl flow
 node counter "Counter" as number = 0
-step "Increment"
+step "Increase"
   set counter = 1
   focus counter
-  note "Counter is now one."
+  note "The counter is now one."
 ```
 ~~~
+
+Compile it:
 
 ~~~ts
 import { compile } from "@0xbuff/throughline";
@@ -35,39 +50,40 @@ import { compile } from "@0xbuff/throughline";
 const source = [
   "```thl flow",
   'node counter "Counter" as number = 0',
-  'step "Increment"',
+  'step "Increase"',
   "  set counter = 1",
   "  focus counter",
-  '  note "Counter is now one."',
+  '  note "The counter is now one."',
   "```",
 ].join("\n");
 
 const trace = compile(source);
-if (trace.frames.length !== 2) throw new Error("Expected initial + increment frames");
+
+console.log(trace.frames.length); // 2: initial state + one step
 ~~~
 
-`trace.version === 1` is the **trace schema**, not package version `0.0.2`. Frame 0 is initial state, followed by one frame per step. Seeking reads compiled snapshots; it does not recompute the program.
+The first frame shows `counter = 0`. The next frame shows `counter = 1`. When someone moves between frames, Throughline reads the saved values; it does not run the source again.
 
-## Invariants that prevent common mistakes
+## Important rules
 
-- **`send` does not mutate** the destination. Use `set` for actual state changes. A `focus`/`note` annotates a beat; neither updates state.
-- **Never assume every `set` produces a visible value change.** A same-value write may not highlight a change. Use separate beats and meaningful focus/notes as necessary.
-- **Do not overlap writes within a single step** (such as `set data = [...]` plus `set data[0] = ...`). Compilation rejects conflicting parent/child targets.
-- **Do not transfer over hidden links/endpoints.** Predeclare future items with `hidden`, then `show` them before a transfer that uses them.
-- **Do not write arbitrary JS expressions** inside `thl`. Values are finite JSON; strings must be double-quoted.
-- **Do not invent player props or deep imports.** No `source`, `steps`, `autoplay` or `children` player props; pass a compiled `trace`.
-- **Do not recompile per React render** or replace the trace object on every step. Replacing trace identity resets playback.
-- **No React requirement for the compiler.** Add React 19 dependencies only if rendering the optional player.
-- **No automatic Markdown scanning.** Extract exactly one intended `thl` block through the host Markdown parser. Fences inside normal prose do not run themselves.
-- **Do not silently add capabilities.** Version 0.0.2 provides five domains and exactly four public package export paths.
+- Declare nodes, links, and groups **before** the first `step`.
+- `set` changes a value. `focus` highlights it. `note` explains it. `send` shows movement along a link but **does not change** the destination's value.
+- Write values as JSON: `1`, `true`, `"ready"`, `[1,2]`, `{"ok":true}`. Do not write JavaScript expressions inside a diagram.
+- If the user needs a node or link to appear later, declare it as `hidden` and reveal it with `show`. Never send data along a hidden link.
+- Avoid two `set` commands that change the same target, or a target and its parent, within one step.
+- Keep each step focused on one understandable change. A note is not a state update.
+- Compile **one** `thl` block at a time. For a Markdown page with several blocks, extract and compile each block separately.
+- Do not pass raw source to `ThroughlinePlayer`. Pass a compiled `trace`, and do not recreate that trace during every React render.
 
-## Load focused references as required
+## Use the guide for the task
 
-- [Flow grammar, state and visualization semantics](references/grammar.md): when authoring or debugging `thl flow`.
-- [Computed domain syntax, boundaries and examples](references/domains.md): whenever using `bindings`, `binary`, `matrix`, or `callstack`.
-- [React, SSR and Fumadocs/MDX integration](references/integration.md): for app, docs or web work.
-- [Public API, diagnostics, limits and test checklist](references/api-and-validation.md): for library calls, programmatic traces, failures and acceptance tests.
+All supporting instructions are included in this skill:
 
-## Authoritative sources
+- [Flow diagrams](references/grammar.md) — full syntax for custom diagrams, links, values, visibility, and common mistakes.
+- [Other diagram types](references/domains.md) — working examples and limits for `bindings`, `binary`, `matrix`, and `callstack`.
+- [Using Throughline in an app](references/integration.md) — installation, React, Next.js, Markdown/MDX, Fumadocs, CSS customization, and optional sound.
+- [API and troubleshooting](references/api-and-validation.md) — functions, types, errors, limits, and ways to check the result.
 
-Review the [source README](https://github.com/0xbuffdev/throughline/blob/main/README.md), [grammar](https://github.com/0xbuffdev/throughline/blob/main/docs/grammar.md), [domain catalog](https://github.com/0xbuffdev/throughline/blob/main/docs/catalog.md), [architecture](https://github.com/0xbuffdev/throughline/blob/main/docs/architecture.md), and [published exports](https://github.com/0xbuffdev/throughline/blob/main/package.json) when accuracy depends on the exact installed version. If implementing a *new computed domain in the Throughline package itself*, follow its [adapter guide](https://github.com/0xbuffdev/throughline/blob/main/docs/authoring.md) and repository instructions; this is different from consuming the published package.
+## Finish the task
+
+Give the user the source or code needed for their actual project. Check the examples against the installed package when possible, and state clearly if execution or browser behavior was not verified.
