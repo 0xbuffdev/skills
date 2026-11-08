@@ -81,7 +81,7 @@ The example starts with three entities (one hidden) and two links (one hidden). 
 ## Failure conditions to check
 
 - Misspelled domain or header, extra header options, malformed fence.
-- Missing/duplicate labels or IDs, unsupported view/layout, invalid JSON.
+- Missing/duplicate identifiers, unsupported view/layout, invalid JSON.
 - Events before a step, declarations after a step.
 - Unknown link/entity or impossible nested target.
 - Same-step parent/child conflicting writes.

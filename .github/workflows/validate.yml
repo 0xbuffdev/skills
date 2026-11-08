@@ -1,0 +1,29 @@
+name: Validate agent skills
+on:
+  push:
+    branches:
+      - main
+      - feat/throughline-agent-skill
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out skill repository
+        uses: actions/checkout@v4
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Validate skill structure
+        run: node scripts/check-skill.mjs
+      - name: Install exact published runtime version
+        run: npm install --no-save --no-package-lock --ignore-scripts @0xbuff/throughline@0.0.2
+      - name: Test real Throughline compilation
+        run: node scripts/smoke-throughline.mjs
+      - name: Check skills CLI discovery
+        run: npx --yes skills add . --list

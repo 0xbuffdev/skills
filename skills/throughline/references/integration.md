@@ -45,8 +45,8 @@ try {
   trace = compile(source);
 } catch (error) {
   if (error instanceof ProgramError) {
-    // Preserve source-positioned diagnostics for author feedback.
-    throw new Error(error.diagnostics.map(d => d.message).join("; "), { cause: error });
+    // Preserve source-positioned diagnostics and the original error.
+    console.error(error.diagnostics);
   }
   throw error;
 }
