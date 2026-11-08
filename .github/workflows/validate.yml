@@ -58,6 +58,8 @@ jobs:
           else
             node scripts/check-versions.mjs
           fi
+      - name: Test version-bump enforcement
+        run: node --test scripts/check-versions.test.mjs
       - name: Install Throughline 0.0.2 for tests
         run: npm install --no-save --no-package-lock --ignore-scripts @0xbuff/throughline@0.0.2
       - name: Test example diagrams
