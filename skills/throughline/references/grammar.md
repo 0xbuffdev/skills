@@ -1,91 +1,119 @@
-# Hand-authored `thl flow` grammar and semantics (v0.0.2)
+# Custom diagrams with `thl flow`
 
-Use this file when writing or reviewing authored flow traces. It summarizes the released [grammar](https://github.com/0xbuffdev/throughline/blob/main/docs/grammar.md); the package parser is authoritative.
+Use `flow` when you want to choose exactly what appears and what changes during each step. It works for algorithms, data structures, system behavior, workflows, and lessons.
 
-## Parsing scope
+## How a flow diagram is written
 
-One source passed to `compile` begins with a `thl <domain>` header or a CommonMark-compatible ```thl flow` / `~~~thl flow` fence. End it before unrelated Markdown. Surrounding prose and multi-block documents must be split by the host parser. Fences support CommonMark-style indentation and length; the header accepts **only** `thl` plus one domain token. Blank and `#` comment lines inside the block are ignored.
-
-## Declarations before any step
-
-| Syntax | Effect |
-| --- | --- |
-| `group "<name>" as row\|column\|tree` | Layout for matching named lane/group |
-| `node <id> "<label>" [in "<lane>"] [as <view>] [hidden] [= <json>]` | Entity; missing initial value defaults to `null` |
-| `link <id> <from> -> <to> ["<label>"] [hidden]` | Directed relation between declared node identifiers |
-| `step "<label>"` | Start a named beat; all following events attach to it until next `step` |
-
-Layouts: `row`, `column`, `tree`. Node views: `auto`, `text`, `number`, `array`, `stack`, `matrix`, `bits`, `record`. Identifier tokens consist of word characters and hyphens. Quote user-visible labels and lane names as JSON strings. Entities/relations and groups cannot be added after the first step.
-
-## Events inside a named step
-
-| Syntax | Effect |
-| --- | --- |
-| `set <target> = <json>` | Persistently update an entity value or nested position |
-| `focus [<target>, ...]` | Highlight targets *for this beat only*; comma or whitespace separated |
-| `send <link-id> [= <json>]` | Emit a one-beat transfer along an existing, visible link; **not** a write |
-| `note "<text>"` | Add a one-beat caption |
-| `show node <id>` / `hide node <id>` | Persistently change node visibility |
-| `show link <id>` / `hide link <id>` | Persistently change relation visibility |
-
-No events may precede the first step. State updates in one step are applied together. A same-step transfer is validated against the resulting visibility state.
-
-## Targets, JSON, values
-
-Valid targets: `counter`, `items[0]`, `matrix[1][2]`, `settings.mode`. Use a known node ID. `set` validates actual paths; records may gain keys and arrays may append at exactly `[length]`, but no arbitrary sparse insertion or indexing into non-arrays. `focus` validates target syntax and ID; an unresolved *position* may not visibly highlight, so use real values and verify.
-
-Allowed literal values are finite JSON (`null`, booleans, numbers, quoted strings, arrays, objects). No `undefined`, `NaN`, `Infinity`, comments inside JSON, or JavaScript expressions. The language has no assignments based on arithmetic expressions; compute values externally when authoring steps.
-
-A step may not contain overlapping writes to the same target or an ancestor/descendant path. Split these into separate steps. Relations must point to known node IDs; transfers cannot use hidden links or endpoints.
-
-## Full explanatory example
+Put one `thl flow` block in Markdown:
 
 ~~~markdown
 ```thl flow
-group "Pipeline" as row
-node input "Input" in "Pipeline" as number = 3
-node output "Output" in "Pipeline" as number = 0
-node archive "Archive" in "Pipeline" hidden = null
-link channel input -> output "signal"
-link archived output -> archive hidden
-step "Read"
-  focus input
-  note "Input currently holds three."
-step "Transmit"
-  send channel = 3
-  focus input, output
-  note "The transfer is shown, but output still holds zero."
-step "Receive"
-  set output = 3
-  focus output
-  note "Receiving is modeled by an explicit state update."
-step "Archive"
-  show node archive
-  show link archived
-  set archive = 3
-  focus archive
-  note "The archived value now appears."
+node counter "Counter" = 0
+step "Increase"
+  set counter = 1
+  focus counter
+  note "The counter is now one."
 ```
 ~~~
 
-The example starts with three entities (one hidden) and two links (one hidden). `Transmit` sends a packet without changing `output`; `Receive` applies the write; `Archive` reveals predeclared topology and state. Verify the final snapshots rather than inferring them from captions alone.
+Everything before the first `step` sets up the diagram. Each `step` shows one change or explanation. Empty lines and lines beginning with `#` may be used for readability.
 
-## Staging rules
+You may pass a single full fence to `compile(source)`, or start the string with `thl flow` without Markdown fences. Do not pass an entire Markdown document containing surrounding prose or multiple blocks.
 
-1. **One idea per beat.** Keep independent operations separate so captions/highlights remain legible.
-2. **Sending is not setting.** If depicting a transfer and an arrival as two stages, use `send` in the first and `set` in the next. If both genuinely belong to one atomic step, both events may appear there.
-3. **Stable identities.** Declare future entities and links as hidden and show/hide them to depict structural changes; never try to declare a node inside a step.
-4. **Explain actual state.** A note claiming an update is not evidence of a `set`; check the resulting frame.
-5. **Avoid brittle same-value transitions.** Calling `set x = 1` when `x` is already `1` may not produce an apparent change; the beat can still focus and explain.
+## Set up the diagram
 
-## Failure conditions to check
+| Statement | Example | What it does |
+| --- | --- | --- |
+| `group "<name>" as row\|column\|tree` | `group "Memory" as row` | Choose how items in a named lane are arranged. |
+| `node <id> "<label>" [in "<lane>"] [as <view>] [hidden] [= <json>]` | `node items "Items" in "Memory" as array = [1,2]` | Add an item with an initial value. |
+| `link <id> <from> -> <to> ["<label>"] [hidden]` | `link route input -> output "sends"` | Connect two items with a directed link. |
+| `step "<label>"` | `step "Receive"` | Start a step. The following commands belong to it. |
 
-- Misspelled domain or header, extra header options, malformed fence.
-- Missing/duplicate identifiers, unsupported view/layout, invalid JSON.
-- Events before a step, declarations after a step.
-- Unknown link/entity or impossible nested target.
-- Same-step parent/child conflicting writes.
-- Transferring on hidden topology.
-- Source or expansion limits exceeded.
+Use a unique ID for each node and link. IDs may contain letters, digits, underscores, and hyphens. Labels, lane names, step names, and link labels are double-quoted strings.
 
-`ProgramError.diagnostics` contains `message` and optionally `line` or `beat`. Do not swallow diagnostics.
+- Layouts: `row`, `column`, `tree`.
+- Views: `auto`, `text`, `number`, `array`, `stack`, `matrix`, `bits`, `record`.
+- If no initial value is given, a node starts at `null`.
+- The lane name in `in "<lane>"` is also the name used to arrange nodes with `group`.
+- Declare groups, nodes, and links before the first `step`.
+
+## Commands inside a step
+
+| Command | Example | Meaning |
+| --- | --- | --- |
+| `set <target> = <json>` | `set counter = 2` | Change a value for this step and future steps. |
+| `focus <target>, <target>` | `focus input, output` | Highlight one or more items during this step. |
+| `send <link-id> [= <json>]` | `send route = 2` | Show data moving along a link for this step only. |
+| `note "<text>"` | `note "The response arrived."` | Add a caption for this step. |
+| `show node <id>` / `hide node <id>` | `show node output` | Reveal or hide a node until changed again. |
+| `show link <id>` / `hide link <id>` | `show link route` | Reveal or hide a link until changed again. |
+
+**Sending is not changing a value.** `send route = 2` shows a transfer but does not update the destination; add a separate `set` when you want its state to change.
+
+`focus`, `note`, and `send` describe one step. `set`, `show`, and `hide` affect later frames too.
+
+## Values and targets
+
+A value must be JSON: numbers, booleans, `null`, double-quoted strings, arrays, or objects.
+
+Valid:
+
+~~~text
+set count = 3
+set mode = "running"
+set ready = true
+set items = [1,2,3]
+set settings = {"enabled":true}
+set items[1] = 9
+set settings.enabled = false
+set grid[0][1] = 8
+~~~
+
+Unsupported:
+
+~~~text
+set count = count + 1
+set mode = running
+set count = undefined
+set items[10] = 5
+~~~
+
+Every target starts with an existing node ID. You may update an array position or an object property if the path makes sense. You can append one item at an array's current length, but you cannot skip array positions. You cannot write a parent and its child in the same step (for example, `set items = [1,2]` and `set items[0] = 3`). Use separate steps instead.
+
+A `focus` target can refer to a whole node or a position inside it; use an actual position when you need a visible highlight.
+
+## Full example: send, receive, then finish
+
+~~~markdown
+```thl flow
+group "Request" as row
+node client "Client" in "Request" as text = "ready"
+node server "Server" in "Request" as text hidden = null
+link request client -> server "message" hidden
+step "Start"
+  focus client
+  note "The client is ready to send."
+step "Open connection"
+  show node server
+  show link request
+  note "The destination is available."
+step "Send request"
+  send request = "hello"
+  focus client
+  note "The message is in transit. The server has not changed yet."
+step "Receive request"
+  set server = "hello"
+  focus server
+  note "The server now holds the message."
+```
+~~~
+
+After `Send request`, the server's value is still `null`. Only `Receive request` changes it to `"hello"`. The client, server, and link are declared once and keep their identities through every step.
+
+## Before finishing
+
+- Keep each step short enough to explain in a sentence.
+- Check all IDs and links before running the compiler.
+- Ensure the link and its two nodes are visible when using `send`.
+- If a value already equals the value written by `set`, there may be no visual change highlight. Use a meaningful `focus` or adjust the steps.
+- Invalid syntax, references, value paths, conflicting changes, and hidden transfers cause `ProgramError`. Fix the source and compile again.

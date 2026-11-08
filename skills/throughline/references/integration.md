@@ -1,65 +1,58 @@
-# Integrating Throughline in TypeScript, React 19 and Markdown/MDX
+# Use Throughline in an application
 
-Use the package's **four documented exports only**:
+These examples use `@0xbuff/throughline` version `0.0.2`.
 
-| Export | Use |
-| --- | --- |
-| `@0xbuff/throughline` | React-free compiler, parser, tracer, types and diagnostics |
-| `@0xbuff/throughline/react` | Optional `ThroughlinePlayer` and its props |
-| `@0xbuff/throughline/examples` | Shipped `EXAMPLES` authored fixture list |
-| `@0xbuff/throughline/styles/throughline.css` | Explicit opt-in player stylesheet |
+## Install
 
-The 0.0.2 package is ESM, targets Node.js **24+**, and has optional React / React DOM **19** peers. Do **not** deep-import `src/*` or `dist/*`. The compiler itself must not load React.
-
-## Install only what you need
+For a Node.js 24+ TypeScript or JavaScript project:
 
 ~~~sh
 npm install @0xbuff/throughline
 ~~~
 
-Only for the React player:
+For an interactive React player, also use React 19 and React DOM 19:
 
 ~~~sh
 npm install react@^19 react-dom@^19
 ~~~
 
-Do not install the React player if the task is headless trace compilation or validation.
+The core compiler works without React or a browser.
 
-## Pure compilation: Node, scripts, CI, static publishing
+## Supported imports
+
+| Import | What it provides |
+| --- | --- |
+| `@0xbuff/throughline` | Compile diagrams and inspect frames |
+| `@0xbuff/throughline/react` | `ThroughlinePlayer` |
+| `@0xbuff/throughline/examples` | Ready-made `EXAMPLES` |
+| `@0xbuff/throughline/styles/throughline.css` | The player stylesheet |
+
+Do not import from internal `src` or `dist` paths.
+
+## Compile without React
 
 ~~~ts
-import { compile, ProgramError } from "@0xbuff/throughline";
+import { compile } from "@0xbuff/throughline";
 
 const source = [
   "```thl flow",
-  'node state "State" = "idle"',
-  'step "Activate"',
-  '  set state = "active"',
-  "  focus state",
-  '  note "The state is active."',
+  'node task "Task" = "pending"',
+  'step "Complete"',
+  '  set task = "done"',
+  "  focus task",
+  '  note "The task is complete."',
   "```",
 ].join("\n");
 
-let trace;
-try {
-  trace = compile(source);
-} catch (error) {
-  if (error instanceof ProgramError) {
-    // Preserve source-positioned diagnostics and the original error.
-    console.error(error.diagnostics);
-  }
-  throw error;
-}
+const trace = compile(source);
 
-// Initial frame, then one frame per named step.
-console.log(trace.frames[0]?.label, trace.frames[1]?.state.entities);
+console.log(trace.version);       // 1
+console.log(trace.frames.length); // 2
 ~~~
 
-**Scope:** `compile(source)` parses **one** `thl` block, not a whole Markdown page. Header can be fenced or unfenced. For a parsed document, have the host Markdown/MDX parser identify blocks, then compile each block separately. `parseThl` returns an AST or `null`; `compileAst(ast)` compiles an already-extracted `ThlBlock`.
+`compile` turns one `thl` block into frames: the initial frame followed by a frame for every step. The trace schema version `1` is separate from the npm package version.
 
-## React player
-
-Import CSS **once** from your app's global stylesheet entry or root layout. In a regular React app:
+## Display an interactive React player
 
 ~~~tsx
 import { compile } from "@0xbuff/throughline";
@@ -73,73 +66,169 @@ const source = [
   "```",
 ].join("\n");
 
-const stableTrace = compile(source); // Outside component: do not recompile each render.
+const trace = compile(source);
 
-export function BinaryDemo() {
-  return <ThroughlinePlayer trace={stableTrace} theme="auto" />;
+export function AdditionDemo() {
+  return <ThroughlinePlayer trace={trace} theme="auto" />;
 }
 ~~~
 
-Actual player props (0.0.2): `trace: Trace` (required), `className?: string`, `theme?: "light" | "dark" | "auto"`, `sonification?: SonificationOptions`. Do not pass `source`, `initialStep`, `autoPlay`, `events`, `children` or an invented callback. Sound controls are omitted unless `sonification` is explicitly supplied; never enable audio on behalf of a user implicitly.
+Import the stylesheet only once in the application. Keep the compiled `trace` stable while the user steps through it; if you give the player a newly created trace object, playback resets.
 
-The player renders a responsive SVG and caption/inspector/controls. Keyboard navigation, status announcements, reduced motion and resizing are built in; retain them when wrapping. The `--thl-*` CSS custom properties and `thl-` classes govern theming; put host overrides after the package stylesheet and optionally supply a scoping `className`. Do not copy undocumented internal CSS or replace package components to add simple theming.
+The player accepts these props:
 
-## Next.js App Router / React Server Components
+| Prop | Type | Description |
+| --- | --- | --- |
+| `trace` | `Trace` | Required compiled diagram |
+| `theme` | `"auto" \| "light" \| "dark"` | Color theme; defaults to `"auto"` |
+| `className` | `string` | A custom class for styling |
+| `sonification` | `SonificationOptions` | Optional sound controls |
 
-The player uses React hooks. Put the player wrapper in a client component; compile on the server or at build time when possible. The compiled `Trace` is serializable data that can be passed to the client boundary.
+Do not pass raw `source`, `autoplay`, `initialStep`, or `children` to the player. The player supplies its own buttons, timeline, state inspector, captions, and keyboard navigation.
+
+### Optional sound
+
+Sound is off unless explicitly provided. To show a sound toggle that starts off:
 
 ~~~tsx
-// components/trace-player.tsx
+<ThroughlinePlayer trace={trace} sonification={{ enabled: false }} />
+~~~
+
+`sonification` also supports `onTone` to handle tone events yourself. Its event carries `step`, `total`, `frequency`, and `durationMs`. Avoid starting sound automatically; let the user opt in.
+
+## Next.js and other server-rendered React apps
+
+Use a client component for the player because it uses React hooks. You can compile the source on the server and pass the resulting `Trace` to that component.
+
+~~~tsx
+// components/throughline-client.tsx
 "use client";
 
 import type { Trace } from "@0xbuff/throughline";
 import { ThroughlinePlayer } from "@0xbuff/throughline/react";
 
-export function TracePlayer({ trace }: { trace: Trace }) {
+export function ThroughlineClient({ trace }: { trace: Trace }) {
   return <ThroughlinePlayer trace={trace} theme="auto" />;
 }
 ~~~
 
 ~~~tsx
-// app/example/page.tsx (server component)
+// app/example/page.tsx — server component
 import { compile } from "@0xbuff/throughline";
-import { TracePlayer } from "@/components/trace-player";
+import { ThroughlineClient } from "@/components/throughline-client";
 
 const source = ["```thl callstack", "fact 4", "```"].join("\n");
+const trace = compile(source);
 
-export default function ExamplePage() {
-  return <TracePlayer trace={compile(source)} />;
+export default function Page() {
+  return <ThroughlineClient trace={trace} />;
 }
 ~~~
 
-Import `@0xbuff/throughline/styles/throughline.css` once in the app's global CSS entry (for example the root layout). Keep compilation at module/build/server scope for static lessons or memoized for changing inputs. Avoid client-side recompilation on playback events; replacing the `trace` object resets playback. Ensure the framework's Node and React versions actually meet the published requirements.
+Load `@0xbuff/throughline/styles/throughline.css` in the application's root layout or another suitable global stylesheet entry. Server compilation keeps the diagram source and parsing work out of the interactive player.
 
-## MDX and Fumadocs: code fence + live visualization
+## Markdown, MDX, and Fumadocs
 
-A Markdown fence such as:
+A code block with a `thl` language name is **not automatically interactive**. Syntax highlighting can display the code, but the application must also render a player.
 
-~~~markdown
-```thl matrix
-A = [[1,2],[3,4]]
-B = [[5,6],[7,8]]
-```
+For a single example, create a component that renders both its code and its compiled trace. With a client component like `ThroughlineClient` above:
+
+~~~tsx
+// components/lesson-example.tsx — server component
+import { compile } from "@0xbuff/throughline";
+import { ThroughlineClient } from "./throughline-client";
+
+const source = [
+  "```thl flow",
+  'node flag "Flag" = false',
+  'step "Enable"',
+  "  set flag = true",
+  "```",
+].join("\n");
+
+const trace = compile(source);
+
+export function LessonExample() {
+  return (
+    <section>
+      <pre><code>{source}</code></pre>
+      <ThroughlineClient trace={trace} />
+    </section>
+  );
+}
 ~~~
 
-is **just code** to most Markdown/MDX renderers. Installing Throughline or adding the language name to syntax highlighting does not make a player appear. To present both source and a live player:
+Use `<LessonExample />` from an MDX page after registering or importing the component as required by the site's MDX setup. This is the simplest dependable way to put a visualization beside the source.
 
-1. Use the existing Markdown/MDX parser (including Fumadocs' configured MDX pipeline) to identify fenced code whose information string is `thl <supported-domain>`. Preserve its body, language metadata and source locations.
-2. For each matching block, construct a *single* Throughline source (`header + newline + body`, or a complete fenced block) and call `compile` / `compileAst` at build time or in a trusted server compilation phase.
-3. On `ProgramError`, surface the original diagnostics at authoring/build time. Do **not** silently drop malformed traces, and do not swallow errors with an empty player.
-4. Render the original, escaped source as a normal syntax-highlighted code block **and** a component that receives the compiled `Trace` as data and renders `<ThroughlinePlayer trace={trace} />` (through a client wrapper where necessary).
-5. Confirm the stylesheet loads once, the player hydrates without mismatch and accessible controls work. Preserve existing MDX component mappings and don't inject unsanitized HTML.
+For **every `thl` fence in a Markdown document**, add a build-time Markdown/MDX rule that:
 
-The exact remark/rehype/MDX component override API depends on the host's installed Fumadocs and MDX versions. Read its actual configuration and official documentation before implementing a transformer. Never assume a `pre` renderer is given a `thl` info string or that a `code` renderer automatically knows the fence metadata. If the host's pipeline cannot recover it, use an explicit authored demo component instead.
+1. Finds fenced code blocks whose language is `thl` and whose domain is one of the five supported names.
+2. Takes the contents of each block and builds a complete `thl <domain>` source for it.
+3. Compiles each block separately. Show `ProgramError` with its source line when a block is invalid; fail the documentation build rather than silently skipping it.
+4. Renders the original code as text and the compiled `Trace` using a client player component.
+5. Keeps existing code blocks for other languages unchanged.
 
-## Safe architecture for authoring systems
+Use the site's actual MDX parser/plugin interface; not all versions of Fumadocs pass fence metadata to the same component. Do not assume that changing a `pre` or `code` renderer alone is sufficient.
 
-- The authored block is *data*, not executable JavaScript; compile does not evaluate arbitrary authored code or fetch URLs.
-- Source parsing is bounded, and invalid references/cycles/values are rejected. Still apply your application's input-size, authorization and content-review policies.
-- For many blocks, compile each independently; do not concatenate them or assume a block can reference nodes in another.
-- Display text/diagnostics as text, not raw HTML. Do not expose private paths or build secrets in public error pages.
-- In a docs build, fail CI on invalid Throughline input so misleading visualizations cannot ship.
-- On runtime user-authored content, use a controlled error view and cap request/work budgets; never treat compile errors as a reason to execute the source another way.
+## Change colors and styles
+
+The default stylesheet uses classes beginning with `thl-` and CSS variables beginning with `--thl-`. Override those variables on a player using `className`:
+
+~~~tsx
+<ThroughlinePlayer trace={trace} className="lesson-trace" theme="light" />
+~~~
+
+~~~css
+/* Load this after the Throughline stylesheet. */
+.lesson-trace {
+  --thl-bg: #f8fafc;
+  --thl-panel: #eef2ff;
+  --thl-surface: #ffffff;
+  --thl-text: #172033;
+  --thl-muted: #4b5563;
+  --thl-line: #cbd5e1;
+  --thl-focus: #2563eb;
+  --thl-focus-bg: #dbeafe;
+  --thl-change: #a16207;
+  --thl-change-bg: #fef3c7;
+  border-radius: 12px;
+}
+~~~
+
+All supported color variables:
+
+| Variable | Controls |
+| --- | --- |
+| `--thl-bg` | Player background |
+| `--thl-panel` | Group panels and controls |
+| `--thl-surface` | Node backgrounds |
+| `--thl-text` | Main text |
+| `--thl-muted` | Secondary labels and lines |
+| `--thl-line` | Borders and separators |
+| `--thl-focus` | Active item outlines and transfers |
+| `--thl-focus-bg` | Active item backgrounds |
+| `--thl-change` | Changed values and outlines |
+| `--thl-change-bg` | Changed value backgrounds |
+
+The stylesheet also supplies `.thl-scene`, `.thl-node`, `.thl-caption`, `.thl-controls`, `.thl-timeline`, and `.thl-inspector` selectors. You can override these in a host stylesheet loaded later, for example:
+
+~~~css
+.lesson-trace .thl-caption {
+  padding: 18px;
+}
+
+.lesson-trace .thl-controls {
+  gap: 10px;
+}
+~~~
+
+When replacing styles entirely, preserve the player's layout, focus outlines, keyboard controls, live status, hidden screen-reader descriptions, and reduced-motion support. Using the packaged CSS plus overrides is safer than rewriting it from scratch.
+
+## Common integration mistakes
+
+- Compiling on every React render creates a new trace and resets playback. Compile once or memoize by source.
+- Passing an entire Markdown page to `compile` fails. Extract each `thl` block first.
+- Forgetting the stylesheet produces a poorly formatted player.
+- Importing the React player in a server component may fail; use a client wrapper.
+- A Markdown code fence alone is only visible source; add the explicit player component.
+- Build errors should show the invalid line instead of displaying a blank visualization.

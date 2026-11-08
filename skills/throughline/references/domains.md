@@ -1,24 +1,39 @@
-# Computed domains — exact supported syntax (v0.0.2)
+# Built-in diagram types
 
-Choose a computed adapter only when the user's explanation matches its *implemented* language. They produce regular version-1 trace frames. Use `flow` for custom workflows, branches, loops, sorting/search algorithms, protocols or math beyond the listed adapters.
+Throughline supports five diagram types: `flow`, `bindings`, `binary`, `matrix`, and `callstack`. Use [flow diagrams](grammar.md) for anything that does not match the four specialized types below.
 
-## `bindings` — primitives, references and push
+Each example is a complete Markdown block. Pass **one block at a time** to `compile(source)`.
+
+## Variables and shared objects: `bindings`
 
 ~~~markdown
 ```thl bindings
-let a = 5
-let b = a
-b = 9
-const list = [1, 2]
-const alias = list
+let list = [1, 2]
+let alias = list
 alias.push(3)
 alias = [7]
 ```
 ~~~
 
-Supported statements: `let` or `const` declaration (`<name> = <json-or-name>`), variable reassignment (`<name> = <json-or-name>`), and `<name>.push(<json>, ...)` on arrays. One source line = one beat. Variables occupy Stack slots; array/object literals appear as heap objects, and reference edges identify aliases. Object identities persist while bindings change. *Important:* `const` immutability is **not enforced** in this educational domain. It is not a JS interpreter. No arithmetic expressions, property reads, indexes, `pop`, or other methods. If exact JavaScript `const` errors are the lesson, manually narrate with `flow` or explain the simplified model.
+The player shows variable slots and the objects they point to. `alias` first shares the array with `list`. Pushing `3` changes the shared array; reassigning `alias` makes it point to a different array.
 
-## `binary` — unsigned ripple-carry addition
+Supported commands:
+
+~~~text
+let name = 5
+const items = [1,2]
+let other = items
+other = [3]
+other.push(4)
+~~~
+
+- Each nonempty source line makes one step.
+- You can declare with `let` or `const`, assign JSON values or another variable's value, and call `push(...)` on arrays.
+- Arrays and objects are shared by reference; primitive values are copied.
+- This is a simple learning model, **not a JavaScript interpreter**. In particular, it does not enforce `const` reassignment rules.
+- Arithmetic expressions, indexing, property access, `pop`, other methods, and general JavaScript statements are not supported.
+
+## Binary addition: `binary`
 
 ~~~markdown
 ```thl binary
@@ -27,9 +42,15 @@ b = 0110
 ```
 ~~~
 
-Two binary operands `a` and `b` in either order, each 1–16 bits. One beat per bit from least significant to most significant, then `Result`. The result is width `n+1` (including leading carry-out zero if no carry). No subtraction, signed two's-complement, multiplication or arbitrary bitwise operations.
+Shows the carry moving through the bits. For this example, 1011 + 0110 = 10001.
 
-## `matrix` — small matrix multiplication
+- Write exactly `a = <bits>` and `b = <bits>`, in either order.
+- Each operand must be an unsigned binary number of 1–16 digits.
+- Steps run from the rightmost bit to the left, followed by a `Result` step.
+- The result has one extra bit for carry-out, even when the extra bit is zero.
+- Signed numbers, subtraction, multiplication, and other bitwise operations are not supported.
+
+## Matrix multiplication: `matrix`
 
 ~~~markdown
 ```thl matrix
@@ -38,9 +59,15 @@ B = [[5,6],[7,8]]
 ```
 ~~~
 
-Two JSON 2D matrices (`A` and `B`) in either order: each with 1–4 rows and 1–4 columns; finite numeric cells; rectangular rows; dimensions compatible (`A` columns = `B` rows). One beat per output cell in row-major order. It focuses the input row/column, writes the corresponding result cell, shows terms and transfers. Result for this example is `[[19,22],[43,50]]`. No determinant, transpose or inverse.
+Displays the input row and column used to calculate each output cell. The result here is `[[19,22],[43,50]]`.
 
-## `callstack` — factorial recursion, only
+- Write exactly `A = <matrix>` and `B = <matrix>`, in either order.
+- Matrices are rectangular JSON arrays with finite numeric values.
+- Each matrix has 1–4 rows and 1–4 columns; the number of columns in `A` must equal the number of rows in `B`.
+- Each output cell gets one step, in row-by-row order.
+- Matrix inversion, transpose, and determinant are not supported.
+
+## Factorial calls: `callstack`
 
 ~~~markdown
 ```thl callstack
@@ -48,21 +75,22 @@ fact 4
 ```
 ~~~
 
-One instruction `fact <n>`, integer depth 1–6 inclusive. Shows calls down to `fact(1)`, returns up the call stack, then a final result. Up to 13 beats. This does **not** support Fibonacci, arbitrary functions or general stack-machine execution.
+Shows calls to `fact(4)` down to `fact(1)`, then each return, and finally the result `24`.
 
-## Domain selection quick check
+- Write exactly one line: `fact <n>`.
+- `n` must be an integer from `1` to `6`.
+- The diagram shows how recursive calls build and unwind the stack.
+- The total number of steps is `2 × n + 1` (and one additional initial frame).
+- This mode cannot run Fibonacci, user-defined functions, loops, or general recursion. For those explanations, write a `flow` diagram.
 
-| User wants | Domain | Why |
-| --- | --- | --- |
-| Custom workflow, algorithm steps, network request or CI | `flow` | Hand-authored state and relations |
-| Aliasing, rebinding, array push | `bindings` | Simplified reference model |
-| Carry propagation for binary addition | `binary` | Exact dedicated adapter |
-| Row-by-column matrix product | `matrix` | Exact dedicated adapter |
-| Call/return for `fact(n)` | `callstack` | Bounded factorial only |
-| Bubble sort, DFS, TCP, gradients, real JS interpreter | `flow` | No matching released adapter |
+## Choose correctly
 
-Never advertise planned `search`, `sort`, `vectors`, `gradient`, `cache`, `race` or `tcp` as supported domains in 0.0.2. Read the [upstream catalog](https://github.com/0xbuffdev/throughline/blob/main/docs/catalog.md) for adapter-specific emitted beats and current limits.
+| What the user needs | Use |
+| --- | --- |
+| A step-by-step custom algorithm, network exchange, sort, search, or workflow | `flow` |
+| Array aliases and references | `bindings` |
+| Unsigned addition with carries | `binary` |
+| Small matrix products | `matrix` |
+| Factorial function call stack | `callstack` |
 
-## Validation
-
-Every example is *one* input block passed to `compile`. Require a nonempty trace, compare the final values with expected arithmetic or mutation, and check labels/frame counts where promised. On invalid parameters, surface `ProgramError` and its original diagnostics instead of substituting a different domain without telling the user.
+Do not label an example `thl sort`, `thl search`, `thl tcp`, or any other name that is not in this list. Those blocks will not compile.
