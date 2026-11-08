@@ -1,0 +1,13 @@
+```thl flow
+node source "Source" = 2
+node destination "Destination" = 0
+link path source -> destination "message"
+step "Send"
+  send path = 2
+  focus source
+  note "A transfer does not change the destination."
+step "Receive"
+  set destination = 2
+  focus destination
+  note "The destination changes only when the value is set."
+```

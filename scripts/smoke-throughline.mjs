@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { compile, compileProgram, ProgramError, tracer } from "@0xbuff/throughline";
@@ -94,4 +96,46 @@ for (const path of [
   }
 }
 assert.ok(checked >= 7, "Expected at least seven examples in public skill documents");
-console.log("Throughline v0.0.2 checks passed, including " + checked + " documented examples");
+const samples = {
+  flow: 3,
+  bindings: 5,
+  binary: 6,
+  matrix: 5,
+  callstack: 10,
+};
+const executable = join(skillRoot, "scripts", "validate.mjs");
+const samplePaths = Object.keys(samples).map(name => join(skillRoot, "assets", name + ".thl"));
+
+for (const [name, frameCount] of Object.entries(samples)) {
+  const source = readFileSync(join(skillRoot, "assets", name + ".thl"), "utf8");
+  assert.equal(compile(source).frames.length, frameCount, "Bundled " + name + " example");
+}
+
+const run = (...files) => spawnSync(process.execPath, [executable, ...files], {
+  cwd: root,
+  encoding: "utf8",
+});
+const valid = run(...samplePaths);
+assert.equal(valid.status, 0, valid.stderr);
+for (const [name, frameCount] of Object.entries(samples)) {
+  assert.ok(valid.stdout.includes(name + ".thl: OK (" + frameCount + " frames)"),
+    name + ": bundled validator should confirm the frame count");
+}
+
+const temp = mkdtempSync(join(tmpdir(), "throughline-skill-"));
+try {
+  const invalidFile = join(temp, "bad.thl");
+  writeFileSync(invalidFile, ["```thl flow", 'node value "Value" = 0', 'step "Bad"', "  set missing = 1", "```"].join("\n"));
+  const invalid = run(invalidFile);
+  assert.equal(invalid.status, 1, "Invalid diagrams must fail validation");
+  assert.match(invalid.stderr, /invalid Throughline diagram/);
+  const unreadable = run(join(temp, "missing.thl"));
+  assert.equal(unreadable.status, 1, "Missing files must fail validation");
+  assert.match(unreadable.stderr, /cannot read file/);
+} finally {
+  rmSync(temp, { recursive: true, force: true });
+}
+
+console.log("Throughline v0.0.2 checks passed, including " + checked
+  + " documented diagrams, five bundled examples, and validator error handling");
+

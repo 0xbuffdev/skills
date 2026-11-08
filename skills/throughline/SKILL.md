@@ -4,7 +4,7 @@ description: Create, fix, and embed step-by-step Throughline visualizations. Use
 compatibility: Node.js 24+ for the Throughline 0.0.2 runtime; React 19 for its optional player.
 metadata:
   author: 0xBUFF
-  version: "0.1.0"
+  version: "0.2.0"
 ---
 
 # Throughline
@@ -67,6 +67,26 @@ console.log(trace.frames.length); // 2: initial state + one step
 ~~~
 
 The first frame shows `counter = 0`. The next frame shows `counter = 1`. When someone moves between frames, Throughline reads the saved values; it does not run the source again.
+
+## Reuse an example or check your diagram
+
+Ready-to-use diagrams are included in this skill:
+
+- [Custom flow](assets/flow.thl) — send a value, then update its destination.
+- [Variable bindings](assets/bindings.thl) — shared arrays and reassignment.
+- [Binary addition](assets/binary.thl) — carry propagation.
+- [Matrix multiplication](assets/matrix.thl) — calculated output cells.
+- [Factorial call stack](assets/callstack.thl) — recursive calls and returns.
+
+Copy the example that matches the task and edit its values or steps. Each file contains one complete, compilable `thl` block.
+
+To check a diagram file, install `@0xbuff/throughline` in the user's project, then run the included [validation script](scripts/validate.mjs) from that project's root:
+
+~~~sh
+node <installed-skill-directory>/scripts/validate.mjs <diagram-file.thl>
+~~~
+
+The script uses the Throughline package installed in that project. It reports the number of frames on success, identifies invalid source and its line when available, and exits with an error on failure. Node.js 24+ is required. Always run it on the user's actual diagram after adapting an example.
 
 ## Important rules
 

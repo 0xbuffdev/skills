@@ -25,6 +25,19 @@ const version = declaredMetadata.match(/^ {2}version: "(0|[1-9]\d*)\.(0|[1-9]\d*
 assert.ok(version, "Skill version must be a quoted X.Y.Z value in metadata.version");
 assert.match(declaredMetadata, /^ {2}author: \S+/m, "Include the skill author in metadata");
 
+const requiredResources = [
+  "scripts/validate.mjs",
+  "assets/flow.thl",
+  "assets/bindings.thl",
+  "assets/binary.thl",
+  "assets/matrix.thl",
+  "assets/callstack.thl",
+];
+for (const resource of requiredResources) {
+  assert.ok(existsSync(join(skillRoot, resource)), "Missing bundled file: " + resource);
+  assert.ok(skill.includes(resource), "SKILL.md must explain how to use: " + resource);
+}
+
 const referencePaths = [
   "references/grammar.md",
   "references/domains.md",

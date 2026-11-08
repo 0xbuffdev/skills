@@ -26,6 +26,8 @@ npm install @0xbuff/throughline
 
 For the interactive player, React 19 and React DOM 19 are also required.
 
-Throughline skill version: **0.1.0** (for `@0xbuff/throughline` version **0.0.2**).
+Throughline skill version: **0.2.0** (for `@0xbuff/throughline` version **0.0.2**).
+
+The skill includes five ready-to-use diagram files and a validator you can run from your project.
 
 See the [Throughline skill](skills/throughline/SKILL.md) for examples and supported features.
