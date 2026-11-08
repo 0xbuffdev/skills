@@ -36,10 +36,12 @@ npx --yes skills add . --list
 For installation checks, run the CLI from a temporary working directory outside this repository, targeting both Claude Code and Codex:
 
 ~~~sh
-npx --yes skills add /absolute/path/to/skills --skill throughline -a claude-code -a codex -y
+SKILLS_REPO="$(pwd)"
+cd "$(mktemp -d)"
+npx --yes skills add "$SKILLS_REPO" --skill throughline -a claude-code -a codex -y
 ~~~
 
-The command above requires substituting the actual local checkout path. CI performs this check automatically. Do not commit installed `node_modules/`, temporary agent directories, or generated artifacts.
+CI also checks installation. Do not commit installed `node_modules/`, temporary agent directories, or generated artifacts.
 
 ## Changes
 

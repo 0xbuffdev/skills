@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { compile, compileProgram, ProgramError, tracer } from "@0xbuff/throughline";
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const skillRoot = join(root, "skills", "throughline");
 
 const traces = [
   {
@@ -8,7 +14,7 @@ const traces = [
       "```thl flow",
       'node a "A" = 3',
       'node b "B" = 0',
-      'link ab a -> b',
+      "link ab a -> b",
       'step "Transfer"',
       "  send ab = 3",
       'step "Receive"',
@@ -46,9 +52,7 @@ for (const test of traces) {
 }
 
 const flow = compile(traces[0].source);
-const initial = flow.frames[0].state;
-const transferred = flow.frames[1].state;
-const received = flow.frames[2].state;
+const [initial, transferred, received] = flow.frames.map(frame => frame.state);
 const value = (state, id) => state.entities.find(entity => entity.id === id)?.value;
 assert.equal(value(initial, "b"), 0);
 assert.equal(value(transferred, "b"), 0, "send must not change the target");
@@ -68,4 +72,26 @@ assert.throws(
   ProgramError,
 );
 
-console.log("Throughline v0.0.2 smoke tests: OK");
+// Compile every complete thl fence embedded in the public skill instructions.
+let checked = 0;
+for (const path of [
+  "SKILL.md",
+  "references/grammar.md",
+  "references/domains.md",
+  "references/integration.md",
+  "references/api-and-validation.md",
+]) {
+  const content = readFileSync(join(skillRoot, path), "utf8");
+  for (const match of content.matchAll(/```thl (?:flow|bindings|binary|matrix|callstack)\r?\n[\s\S]*?\r?\n```/g)) {
+    try {
+      const trace = compile(match[0]);
+      assert.equal(trace.version, 1, path);
+      assert.ok(trace.frames.length >= 2, path + " should have at least one step");
+      checked++;
+    } catch (error) {
+      throw new Error("An example in " + path + " failed to compile", { cause: error });
+    }
+  }
+}
+assert.ok(checked >= 7, "Expected at least seven examples in public skill documents");
+console.log("Throughline v0.0.2 checks passed, including " + checked + " documented examples");
