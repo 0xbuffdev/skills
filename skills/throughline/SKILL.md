@@ -1,6 +1,10 @@
 ---
 name: throughline
 description: Create, fix, and embed step-by-step Throughline visualizations. Use when writing thl Markdown blocks, showing state changes, teaching algorithms, working with flow, bindings, binary, matrix or callstack diagrams, using @0xbuff/throughline in TypeScript or React, integrating MDX/Fumadocs, or customizing the player.
+compatibility: Node.js 24+ for the Throughline 0.0.2 runtime; React 19 for its optional player.
+metadata:
+  author: 0xBUFF
+  version: "0.1.0"
 ---
 
 # Throughline

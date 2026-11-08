@@ -18,6 +18,8 @@ This repository contains public skills that help coding agents complete real tas
 - Keep `SKILL.md` clear and short. Place detailed material in local `references/` files and link to them using relative paths, with a clear reason to read each one.
 - Use plain, direct language. Explain a necessary technical term once; remove unnecessary terms, promotional copy, and publication-status information.
 - Frontmatter must include the skill's exact `name` and a `description` that clearly says when the skill should be used.
+- Give each public skill its own `metadata.version` in `SKILL.md`, as a quoted `MAJOR.MINOR.PATCH` value. Skill versions are independent of the packages they describe. Increase the patch number for corrections, minor for added capabilities, and major for incompatible changes to the skill's instructions.
+- Prepare a matching Git tag such as `throughline-v0.1.0` for a reviewed release; a tag must point to the released merged commit and must not be moved or created without maintainer authorization.
 - Document only released behavior. For Throughline, keep examples compatible with `@0xbuff/throughline@0.0.2` and its four supported package imports. Do not invent domains or React props.
 - Never include credentials, private information, instructions to run untrusted code, or claims that checks passed without actually running them.
 - When changing a skill's documented behavior, update the relevant examples, checks, and evaluation scenarios together.
