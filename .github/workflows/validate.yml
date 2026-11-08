@@ -2,6 +2,7 @@ name: Check skills
 on:
   push:
     branches: [main]
+    tags: ["*-v*"]
   pull_request:
 
 permissions:
@@ -11,14 +12,54 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Check out repository and tags
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Use Node.js 24
         uses: actions/setup-node@v4
         with:
           node-version: "24"
-      - name: Check skill files
+      - name: Use Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check Agent Skills specification
+        run: |
+          python -m pip install --disable-pip-version-check "skills-ref==0.1.1"
+          python - <<'PY'
+          from pathlib import Path
+          from skills_ref import validate
+
+          skills = sorted(path for path in Path("skills").iterdir() if path.is_dir())
+          if not skills:
+              raise SystemExit("No skills found")
+          errors = 0
+          for skill in skills:
+              problems = validate(skill)
+              for problem in problems:
+                  print(f"ERROR {skill}: {problem}")
+              if not problems:
+                  print(f"OK {skill}")
+              errors += len(problems)
+          if errors:
+              raise SystemExit(f"{errors} Agent Skills specification errors")
+          PY
+      - name: Check skill instructions and local references
         run: node scripts/check-skill.mjs
+      - name: Check release versions
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            node scripts/check-versions.mjs --tag "$GITHUB_REF_NAME"
+          elif [[ -n "$BASE_SHA" && ! "$BASE_SHA" =~ ^0+$ ]]; then
+            node scripts/check-versions.mjs --base "$BASE_SHA"
+          else
+            node scripts/check-versions.mjs
+          fi
+      - name: Test version-bump enforcement
+        run: node --test scripts/check-versions.test.mjs
       - name: Install Throughline 0.0.2 for tests
         run: npm install --no-save --no-package-lock --ignore-scripts @0xbuff/throughline@0.0.2
       - name: Test example diagrams

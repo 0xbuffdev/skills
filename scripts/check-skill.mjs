@@ -15,6 +15,16 @@ assert.match(metadata, /^name:\s*throughline\s*$/m);
 assert.match(metadata, /^description:\s*\S.{80,}$/m, "Description must explain when to use the skill");
 assert.ok(metadata.length < 1800, "Keep always-loaded metadata concise");
 
+const description = metadata.match(/^description: (.+)$/m)?.[1];
+assert.ok(description && description.length <= 1024, "Description must fit the standard's 1024 character limit");
+const compatibility = metadata.match(/^compatibility: (.+)$/m)?.[1];
+if (compatibility) assert.ok(compatibility.length <= 500, "Compatibility must fit the standard's 500 character limit");
+const declaredMetadata = metadata.match(/^metadata:\r?\n((?: {2}[^\r\n]+\r?\n?)+)/m)?.[1];
+assert.ok(declaredMetadata, "Use a metadata mapping for the skill version");
+const version = declaredMetadata.match(/^ {2}version: "(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"\s*$/m);
+assert.ok(version, "Skill version must be a quoted X.Y.Z value in metadata.version");
+assert.match(declaredMetadata, /^ {2}author: \S+/m, "Include the skill author in metadata");
+
 const referencePaths = [
   "references/grammar.md",
   "references/domains.md",
