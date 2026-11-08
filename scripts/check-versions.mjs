@@ -11,7 +11,7 @@ const semver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 function readVersion(source, name) {
   const frontmatter = /^---\r?\n([\s\S]+?)\r?\n---(?:\r?\n|$)/.exec(source)?.[1];
   assert.ok(frontmatter, name + ": missing SKILL.md YAML frontmatter");
-  assert.match(frontmatter, new RegExp("^name:\s*" + name + "\s*$", "m"), name + ": name must match its folder");
+  assert.equal(/^name:\s*(\S+)\s*$/m.exec(frontmatter)?.[1], name, name + ": name must match its folder");
   const attributes = /^metadata:\r?\n((?: {2}[^\r\n]+\r?\n?)+)/m.exec(frontmatter)?.[1];
   assert.ok(attributes, name + ": a metadata mapping is required by this repository's release policy");
   const value = /^ {2}version:\s*"([^"]+)"\s*$/m.exec(attributes)?.[1];
