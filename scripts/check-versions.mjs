@@ -49,7 +49,7 @@ if (args.length === 0) {
   const base = args[1];
   assert.match(base, /^[0-9a-f]{40}$/i, "Use a full commit SHA as the base");
   git("cat-file", "-e", base + "^{commit}");
-  const changed = git("diff", "--name-only", "--diff-filter=ACMR", base, "HEAD", "--", "skills/")
+  const changed = git("diff", "--name-only", "--diff-filter=ACMRD", base, "HEAD", "--", "skills/")
     .split("\n").filter(Boolean);
   const changedNames = [...new Set(changed.map(path => /^skills\/([^/]+)\//.exec(path)?.[1]).filter(Boolean))].sort();
 
