@@ -1,33 +1,60 @@
-# 0xBUFF Skills
+# 0xBUFF Agent Skills
 
-Skills that help AI coding agents use 0xBUFF tools correctly. Each skill includes the instructions and examples needed to get started.
+A collection of self-contained [Agent Skills](https://agentskills.io) for building with 0xBUFF technologies. Each skill supplies the instructions, working examples, and local resources needed by a coding agent. Skills are installed individually from this repository.
 
-## Throughline
+## Skills
 
-Use Throughline to show how a value, algorithm, or process changes step by step. The skill helps an agent:
+| Skill | Purpose | Install |
+| --- | --- | --- |
+| [Throughline](skills/throughline/SKILL.md) | Author, compile, validate, and embed step-by-step Throughline visualizations. | `npx skills add https://github.com/0xbuffdev/skills --skill throughline` |
 
-- Write valid `thl` diagrams in Markdown.
-- Choose the right visualization for variables, binary addition, matrix multiplication, recursion, and custom workflows.
-- Add interactive players to React, Next.js, or Markdown/MDX documentation.
-- Style the player and fix common errors.
-- Check that the result works as intended.
+### Throughline
 
-### Install
+Install the skill for your coding agent:
 
-~~~sh
+```sh
 npx skills add https://github.com/0xbuffdev/skills --skill throughline
-~~~
+```
 
-The skill guides your coding agent. To run Throughline in your application, install its package separately:
+In projects that use Throughline, install its runtime separately:
 
-~~~sh
+```sh
 npm install @0xbuff/throughline
-~~~
+```
 
-For the interactive player, React 19 and React DOM 19 are also required.
+The skill targets `@0xbuff/throughline@0.0.2`; the interactive player additionally requires React 19 and React DOM 19. Its bundled examples, reference guides, and validation script are under [`skills/throughline/`](skills/throughline/SKILL.md).
 
-Throughline skill version: **0.2.0** (for `@0xbuff/throughline` version **0.0.2**).
+## Repository layout
 
-The skill includes five ready-to-use diagram files and a validator you can run from your project.
+```text
+.
+├── AGENTS.md                 # Repository-wide instructions
+├── README.md                 # Human-readable skill catalog
+├── skills/
+│   └── throughline/
+│       ├── SKILL.md          # Required skill entry point
+│       ├── references/       # Detailed usage guides, read as needed
+│       ├── scripts/          # Reusable validation helper
+│       └── assets/           # Complete runnable diagrams
+├── evals/                    # Task scenarios for individual skills
+├── scripts/                  # Repository-level quality checks
+└── .github/workflows/        # CI checks and installation tests
+```
 
-See the [Throughline skill](skills/throughline/SKILL.md) for examples and supported features.
+Future skills belong in `skills/<skill-name>/` with their own `SKILL.md`. Add only the `references/`, `scripts/`, or `assets/` directories that the skill actually needs. Do not place another skill's supporting resources in a shared folder.
+
+## Versioning
+
+Each skill has an **independent semantic version** in the quoted `metadata.version` field of its `SKILL.md`. A change inside a skill directory requires a version increase. The repository's version check enforces this in pull requests.
+
+After a release is reviewed and merged, a tag such as `throughline-v0.3.0` may be created for the corresponding released skill version. To install a tagged revision once that tag exists:
+
+```sh
+npx skills add 0xbuffdev/skills@throughline-v0.3.0 --skill throughline
+```
+
+A tag in these examples is a naming convention, not a claim that it has been published.
+
+## Contributing
+
+Read [`AGENTS.md`](AGENTS.md) before changing the repository. Changes go through a dedicated branch and pull request. The general checks validate every skill; domain-specific smoke checks verify working examples where an executable runtime exists.
