@@ -1,0 +1,6 @@
+```thl bindings
+let list = [1, 2]
+let alias = list
+alias.push(3)
+alias = [7]
+```

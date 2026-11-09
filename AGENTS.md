@@ -7,6 +7,8 @@ This repository contains public skills that help coding agents complete real tas
 - `README.md`: installation and short descriptions for people browsing the repository.
 - `skills/<name>/SKILL.md`: a skill's entry point, written for agents using the technology on behalf of a user.
 - `skills/<name>/references/`: complete task-focused instructions bundled with the skill.
+- `skills/<name>/scripts/`: runnable helpers needed by users of the skill.
+- `skills/<name>/assets/`: reusable, tested example files and templates included with the skill.
 - `evals/throughline.json`: realistic tasks that check whether the Throughline skill helps.
 - `scripts/check-skill.mjs`, `scripts/check-versions.mjs`, and `scripts/smoke-throughline.mjs`: skill checks, release versions, and example compatibility.
 - `.github/workflows/validate.yml`: automated checks on pull requests.
@@ -23,7 +25,7 @@ This repository contains public skills that help coding agents complete real tas
 - After final review, signing, and merge, a maintainer may authorize a tag such as `throughline-v0.1.0` at the merged commit. Tag names must match the skill's declared version; never move a published tag. The Skills CLI can install a pinned revision with `npx skills add 0xbuffdev/skills@throughline-v0.1.0 --skill throughline` once that tag exists.
 - Document only released behavior. For Throughline, keep examples compatible with `@0xbuff/throughline@0.0.2` and its four supported package imports. Do not invent domains or React props.
 - Never include credentials, private information, instructions to run untrusted code, or claims that checks passed without actually running them.
-- When changing a skill's documented behavior, update the relevant examples, checks, and evaluation scenarios together.
+- When changing a skill's documented behavior, update the relevant examples, checks, and evaluation scenarios together. Never create empty skill subdirectories purely for appearance.
 
 ## Checks
 
