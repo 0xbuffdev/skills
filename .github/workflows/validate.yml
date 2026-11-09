@@ -47,7 +47,9 @@ jobs:
           PY
       - name: Check skill instructions and local references
         run: node scripts/check-skill.mjs
-      - name: Test catalog isolation and structure\n        run: node --test scripts/check-skill.test.mjs\n      - name: Check release versions
+      - name: Test catalog isolation and structure
+        run: node --test scripts/check-skill.test.mjs
+      - name: Check release versions
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
