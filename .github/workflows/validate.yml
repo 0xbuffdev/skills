@@ -47,6 +47,8 @@ jobs:
           PY
       - name: Check skill instructions and local references
         run: node scripts/check-skill.mjs
+      - name: Test catalog isolation and structure
+        run: node --test scripts/check-skill.test.mjs
       - name: Check release versions
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -66,20 +68,19 @@ jobs:
         run: node scripts/smoke-throughline.mjs
       - name: Check skills CLI
         run: npx --yes skills add . --list
-      - name: Verify Claude Code and Codex installation
+      - name: Verify Claude Code and Codex installation for all skills
+        shell: bash
         run: |
-          mkdir -p "$RUNNER_TEMP/throughline-skill-check"
-          cd "$RUNNER_TEMP/throughline-skill-check"
-          DISABLE_TELEMETRY=1 npx --yes skills add "$GITHUB_WORKSPACE" --skill throughline -a claude-code -a codex -y
-      - name: Confirm installed files for both agents
-        run: |
-          for target in \
-            "$RUNNER_TEMP/throughline-skill-check/.agents/skills/throughline" \
-            "$RUNNER_TEMP/throughline-skill-check/.claude/skills/throughline"; do
-            test -f "$target/SKILL.md"
-            test -f "$target/scripts/validate.mjs"
-            test -f "$target/references/grammar.md"
-            for name in flow bindings binary matrix callstack; do
-              test -f "$target/assets/$name.thl"
+          mkdir -p "$RUNNER_TEMP/skills-install-check"
+          cd "$RUNNER_TEMP/skills-install-check"
+          DISABLE_TELEMETRY=1 npx --yes skills add "$GITHUB_WORKSPACE" --all -a claude-code -a codex -y
+          for skill in "$GITHUB_WORKSPACE"/skills/*; do
+            test -f "$skill/SKILL.md"
+            name="$(basename "$skill")"
+            for installed in ".agents/skills/$name" ".claude/skills/$name"; do
+              test -f "$installed/SKILL.md"
+              while IFS= read -r -d '' file; do
+                test -f "$installed/$file"
+              done < <(cd "$skill" && find . -type f -print0)
             done
           done

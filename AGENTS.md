@@ -1,54 +1,66 @@
-# Agent instructions
+# AGENTS.md
 
-This repository contains public skills that help coding agents complete real tasks. It does not contain the applications or libraries those skills describe.
+Instructions for agents changing this repository. The repository is a catalog of independently installable 0xBUFF Agent Skills, not a workspace for the applications described by the skills.
 
-## Repository layout
+## Read before editing
 
-- `README.md`: installation and short descriptions for people browsing the repository.
-- `skills/<name>/SKILL.md`: a skill's entry point, written for agents using the technology on behalf of a user.
-- `skills/<name>/references/`: complete task-focused instructions bundled with the skill.
-- `skills/<name>/scripts/`: runnable helpers needed by users of the skill.
-- `skills/<name>/assets/`: reusable, tested example files and templates included with the skill.
-- `evals/throughline.json`: realistic tasks that check whether the Throughline skill helps.
-- `scripts/check-skill.mjs`, `scripts/check-versions.mjs`, and `scripts/smoke-throughline.mjs`: skill checks, release versions, and example compatibility.
-- `.github/workflows/validate.yml`: automated checks on pull requests.
+1. Read this file, `README.md`, and any nested `AGENTS.md` covering the files you will modify.
+2. Read the existing `SKILL.md`, its linked resources, and relevant tests before rewriting a skill.
+3. Follow the [Agent Skills specification](https://agentskills.io/specification) and its official skill-creation guidance. The `skills/<name>/SKILL.md` format is the source of truth for each skill's structure.
+4. Verify all product syntax, APIs, version constraints, and examples against the actual released product. Do not invent features or document unreleased behavior.
 
-## Rules for skills
+## Repository structure
 
-- Write for the agent **using the skill**, not for agents maintaining this repository or changing the underlying library.
-- Skills must be self-contained. Explain the syntax, behavior, imports, limitations, errors, and working examples in `SKILL.md` or files within the same skill folder. Do not send users to another repository for missing instructions.
-- Keep `SKILL.md` clear and short. Place detailed material in local `references/` files and link to them using relative paths, with a clear reason to read each one.
-- Use plain, direct language. Explain a necessary technical term once; remove unnecessary terms, promotional copy, and publication-status information.
-- Frontmatter must include the skill's exact `name` and a `description` that clearly says when the skill should be used.
-- Give each skill its own quoted `metadata.version: "MAJOR.MINOR.PATCH"` in `SKILL.md`. Versions are independent of the packages the skill describes. Increase patch for corrections, minor for new capabilities, and major for incompatible skill changes.
-- Any change under `skills/<name>/` requires a higher version in that skill's `SKILL.md`; `scripts/check-versions.mjs --base <base-commit>` enforces this on pull requests. New skills start at an explicit version. Changes outside skill folders do not require a bump.
-- After final review, signing, and merge, a maintainer may authorize a tag such as `throughline-v0.1.0` at the merged commit. Tag names must match the skill's declared version; never move a published tag. The Skills CLI can install a pinned revision with `npx skills add 0xbuffdev/skills@throughline-v0.1.0 --skill throughline` once that tag exists.
-- Document only released behavior. For Throughline, keep examples compatible with `@0xbuff/throughline@0.0.2` and its four supported package imports. Do not invent domains or React props.
-- Never include credentials, private information, instructions to run untrusted code, or claims that checks passed without actually running them.
-- When changing a skill's documented behavior, update the relevant examples, checks, and evaluation scenarios together. Never create empty skill subdirectories purely for appearance.
+- `skills/<name>/SKILL.md`: the required entry point. Folder name and frontmatter `name` must match.
+- `skills/<name>/references/`: optional focused guides referenced by relative paths from `SKILL.md`.
+- `skills/<name>/scripts/`: optional self-contained helpers users can run.
+- `skills/<name>/assets/`: optional complete examples or templates used by the skill.
+- `evals/<name>.json`: task examples that test the corresponding skill.
+- `scripts/`: repository-wide checks and, when necessary, explicitly named product-specific smoke tests.
+- `.github/workflows/validate.yml`: specification, structural, versioning, sample, and installation checks.
+- `README.md`: installation catalog for the people selecting a skill.
 
-## Checks
+Do not add empty optional directories, shared runtime dependencies, or cross-skill imports. A skill must remain usable if installed alone.
+
+## Skill-writing rules
+
+- Address an agent **using** the skill to solve a user's task, not an agent developing the underlying library.
+- Put the trigger conditions and task scope in `description`. Write concise, imperative instructions in `SKILL.md`, with one minimal working example and an ordered workflow.
+- Use progressive disclosure: point directly to local `references/` files for advanced scenarios. Do not send the agent to another repository to complete normal usage.
+- Include actual supported imports, constraints, known failure modes, and a verification path. Do not claim code was run unless it was.
+- Keep all links inside a skill local to that skill and relative. Keep each referenced file focused and avoid deep reference chains.
+- Use frontmatter `name` and `description` as specified by Agent Skills. Add quoted `metadata.version: "MAJOR.MINOR.PATCH"` and `metadata.author` for this catalog. Only add `compatibility` for concrete requirements.
+- Never add credentials, private information, generated agent installation folders, or unaudited executable downloads.
+
+## Independent skill releases
+
+- Any addition, edit, or removal of a file under `skills/<name>/` requires a higher `metadata.version` in that skill's `SKILL.md`.
+- Use a patch increase for fixes, minor for backward-compatible new capabilities, and major for incompatible skill behavior.
+- Start new skills with an explicit version, add an entry to `README.md`, and add realistic evaluation cases and any necessary domain-specific tests.
+- Keep release tags immutable and skill-specific: `<name>-vMAJOR.MINOR.PATCH`. Tags are created only when the user authorizes a release after review and merge. Do not claim a tag exists because a version is present in the file.
+- Keep versions of packages described by a skill separate from the **skill's** version.
+
+## Throughline contract
+
+- Throughline currently documents `@0xbuff/throughline@0.0.2` and its supported root, `/react`, `/examples`, and `/styles/throughline.css` exports.
+- Keep the `flow`, `bindings`, `binary`, `matrix`, and `callstack` examples valid. The compiler supports a single `thl` block per call.
+- Update `evals/throughline.json` and `scripts/smoke-throughline.mjs` when changing observable Throughline guidance.
+
+## Verification
 
 Run from the repository root:
 
-~~~sh
+```sh
 node scripts/check-skill.mjs
+node --test scripts/check-skill.test.mjs scripts/check-versions.test.mjs
 node scripts/check-versions.mjs
 npm install --no-save --no-package-lock --ignore-scripts @0xbuff/throughline@0.0.2
 node scripts/smoke-throughline.mjs
 npx --yes skills add . --list
-~~~
+```
 
-For installation checks, run the CLI from a temporary working directory outside this repository, targeting both Claude Code and Codex:
+For a changed branch, also run `node scripts/check-versions.mjs --base <full-base-commit-sha>`. CI runs the official `skills-ref` validator and checks installation into Claude Code and Codex. Only report the checks actually completed.
 
-~~~sh
-SKILLS_REPO="$(pwd)"
-cd "$(mktemp -d)"
-npx --yes skills add "$SKILLS_REPO" --skill throughline -a claude-code -a codex -y
-~~~
+## Change workflow
 
-CI also checks installation. Do not commit installed `node_modules/`, temporary agent directories, or generated artifacts.
-
-## Changes
-
-Work on a dedicated branch and open a focused pull request. State what changed and which checks actually ran. Final review, any required signing, and merging remain maintainer actions unless explicitly authorized.
+Use a dedicated branch and open a focused pull request against `main`. Explain the skill behavior, compatibility, structural changes, and validation evidence. This project has one maintainer: final review, required signing, merge, and release tagging remain maintainer actions unless explicitly authorized. Do not fabricate results or bypass checks.
