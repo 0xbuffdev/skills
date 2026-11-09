@@ -32,7 +32,7 @@ test("skill edits must bump the version, and tags must match", () => {
     mkdirSync(scriptDir, { recursive: true });
     mkdirSync(skillDir, { recursive: true });
     copyFileSync(validatorPath, join(scriptDir, "check-versions.mjs"));
-    writeFileSync(join(skillDir, "SKILL.md"), skill("0.1.0"));
+    writeFileSync(join(skillDir, "SKILL.md"), skill("0.1.0"));\n    mkdirSync(join(skillDir, "references"), { recursive: true });\n    writeFileSync(join(skillDir, "references", "sample.md"), "A reusable reference.\n");;
 
     const git = (...args) => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
     const run = (...args) => spawnSync(
@@ -48,7 +48,7 @@ test("skill edits must bump the version, and tags must match", () => {
     const base = git("rev-parse", "HEAD");
     assert.equal(run().status, 0, "a complete versioned skill should pass");
     assert.equal(run("--tag", "throughline-v0.1.0").status, 0, "matching tags should pass");
-    assert.notEqual(run("--tag", "throughline-v0.1.1").status, 0, "mismatched tags must fail");
+    assert.notEqual(run("--tag", "throughline-v0.1.1").status, 0, "mismatched tags must fail");\n\n    rmSync(join(skillDir, "references", "sample.md"));\n    git("add", ".");\n    git("commit", "-qm", "remove reference without version bump");\n    assert.notEqual(run("--base", base).status, 0, "deleting a skill resource without a bump must fail");
 
     writeFileSync(join(skillDir, "SKILL.md"), skill("0.1.0", "Updated instructions."));
     git("add", ".");
