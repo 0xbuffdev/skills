@@ -1,60 +1,56 @@
 ---
 name: throughline
-description: Create, fix, and embed step-by-step Throughline visualizations. Use when writing thl Markdown blocks, showing state changes, teaching algorithms, working with flow, bindings, binary, matrix or callstack diagrams, using @0xbuff/throughline in TypeScript or React, integrating MDX/Fumadocs, or customizing the player.
-compatibility: Node.js 24+ for the Throughline 0.0.2 runtime; React 19 for its optional player.
+description: Author, compile, debug, and embed Throughline state visualizations. Use for thl Markdown diagrams, step-by-step algorithms and state changes, variable aliasing, binary addition, matrix multiplication, factorial call stacks, TypeScript tracer programs, React players, and Markdown/MDX or Fumadocs integration with @0xbuff/throughline.
+compatibility: Node.js 24+ for @0xbuff/throughline@0.0.2; React 19 and React DOM 19 for the optional player.
 metadata:
   author: 0xBUFF
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # Throughline
 
-Use this skill when someone wants to **show how something changes, one step at a time**, with Throughline. Produce working examples and integrations, not just explanations.
+Build accurate, step-by-step visualizations with `@0xbuff/throughline@0.0.2`. Throughline compiles one `thl` block into an initial frame and immutable frames for subsequent steps. The React player reads the frames; it does not execute authored source or recompute the diagram during playback.
 
-These instructions cover `@0xbuff/throughline` version `0.0.2`. If a project uses another version, confirm its installed exports and types before changing code.
+## Workflow
 
-## Get started
+1. Identify the learning or debugging goal, the state being shown, and the output target: Markdown, TypeScript, React, or MDX.
+2. Select a supported domain from the table below. Use `flow` for a custom process; do not invent domain names or APIs.
+3. Establish the initial state before describing transitions. Keep each step about one meaningful change.
+4. Compile each `thl` block separately. Inspect the frames for correct state, focus, transfer, and captions; fix compiler diagnostics before delivery.
+5. When rendering interactively, pass a stable compiled `trace` to `ThroughlinePlayer`, load the stylesheet once, and verify player controls and accessibility in the consuming app.
+6. Deliver the actual source or integration code and report which checks were run.
 
-1. Identify what the user wants to show and where it will appear: Markdown, code, React, or a documentation page.
-2. Choose a supported diagram below. Do not invent new diagram types.
-3. Write the source with an initial state and clear named steps.
-4. Compile it with `compile(source)`. Fix errors rather than guessing whether a diagram works.
-5. For an interactive display, use `ThroughlinePlayer` with the compiled result. A `thl` code block does not become a player on its own.
-6. Check the frame count and values; for an app, also check the rendered player, keyboard controls, and styles.
+## Choose a domain
 
-## Pick a diagram
+| Domain | Use for | Constraints |
+| --- | --- | --- |
+| `flow` | Algorithms, data structures, protocols, workflows, or arbitrary authored state changes | Declare nodes and links before steps; values are JSON |
+| `bindings` | Variables, shared arrays or objects, `push`, and rebinding | Limited teaching language; not arbitrary JavaScript |
+| `binary` | Unsigned binary addition with carry | Exactly two operands of 1–16 bits |
+| `matrix` | Small matrix multiplication | Numeric, compatible matrices of up to 4 × 4 |
+| `callstack` | Recursive factorial calls and returns | `fact n` for integer `n` from 1 to 6 |
 
-| Name | Use it for |
-| --- | --- |
-| `flow` | A custom process, algorithm, workflow, protocol, or state change |
-| `bindings` | Variables, shared objects, reassignment, and array `push` |
-| `binary` | Addition of two unsigned binary numbers |
-| `matrix` | Multiplication of two small matrices |
-| `callstack` | The calls and returns of factorial recursion |
+For unsupported computed operations such as Fibonacci, sorting, or a custom protocol, describe the transitions using `flow`. Read [other domains](references/domains.md) before writing non-`flow` source.
 
-Use `flow` for everything not supported by the four built-in examples. In version 0.0.2, `callstack` cannot run arbitrary functions, and `bindings` does not interpret general JavaScript.
+## Author and compile a flow
 
-## Write a first diagram
-
-~~~markdown
 ```thl flow
 node counter "Counter" as number = 0
-step "Increase"
+step "Increment"
   set counter = 1
   focus counter
   note "The counter is now one."
 ```
-~~~
 
-Compile it:
+Use the complete fenced block as a string when calling the compiler:
 
-~~~ts
+```ts
 import { compile } from "@0xbuff/throughline";
 
 const source = [
   "```thl flow",
   'node counter "Counter" as number = 0',
-  'step "Increase"',
+  'step "Increment"',
   "  set counter = 1",
   "  focus counter",
   '  note "The counter is now one."',
@@ -62,52 +58,61 @@ const source = [
 ].join("\n");
 
 const trace = compile(source);
+if (trace.frames.length !== 2) throw new Error("Expected two frames");
+if (trace.frames[1].state.entities.find((item) => item.id === "counter")?.value !== 1) {
+  throw new Error("The counter did not update");
+}
+```
 
-console.log(trace.frames.length); // 2: initial state + one step
-~~~
+Frame `0` has `counter = 0`; frame `1` has `counter = 1`. A `note` explains a change but never changes a value.
 
-The first frame shows `counter = 0`. The next frame shows `counter = 1`. When someone moves between frames, Throughline reads the saved values; it does not run the source again.
+## Render a player
 
-## Reuse an example or check your diagram
+```tsx
+import { compile } from "@0xbuff/throughline";
+import { ThroughlinePlayer } from "@0xbuff/throughline/react";
+import "@0xbuff/throughline/styles/throughline.css";
 
-Ready-to-use diagrams are included in this skill:
+const trace = compile([
+  "```thl binary",
+  "a = 1011",
+  "b = 0110",
+  "```",
+].join("\n"));
 
-- [Custom flow](assets/flow.thl) — send a value, then update its destination.
-- [Variable bindings](assets/bindings.thl) — shared arrays and reassignment.
-- [Binary addition](assets/binary.thl) — carry propagation.
-- [Matrix multiplication](assets/matrix.thl) — calculated output cells.
-- [Factorial call stack](assets/callstack.thl) — recursive calls and returns.
+export function AdditionExample() {
+  return <ThroughlinePlayer trace={trace} theme="auto" />;
+}
+```
 
-Copy the example that matches the task and edit its values or steps. Each file contains one complete, compilable `thl` block.
+Compile outside the render function or memoize by source. `trace` is required; do not pass raw `source`, `autoplay`, or `initialStep` props. For Next.js, compile on the server and pass the trace into a client component that renders the player. A Markdown `thl` fence is **not** interactive by itself; MDX sites must explicitly render the player. Read [application integration](references/integration.md) for client boundaries, multi-fence Markdown, styling, and optional sound.
 
-To check a diagram file, install `@0xbuff/throughline` in the user's project, then run the included [validation script](scripts/validate.mjs) from that project's root:
+## Avoid invalid diagrams
 
-~~~sh
-node <installed-skill-directory>/scripts/validate.mjs <diagram-file.thl>
-~~~
+- Declare every `group`, `node`, and `link` before the first `step`. Use an existing ID in `set`, `focus`, and `send`.
+- Use JSON values, not expressions: `set count = 2` is valid; `set count = count + 1` is not.
+- `send` depicts movement along a visible link; it **does not** update the destination. Add `set` in a later step to change the destination.
+- Declare initially hidden nodes and links up front, then `show` them before a transfer. Never send across a hidden link or endpoint.
+- Do not write the same target twice, or both a parent and its child, in one step.
+- The `bindings` domain is not a full JavaScript interpreter; `callstack` cannot execute arbitrary recursion.
+- Do not pass a whole Markdown document containing multiple `thl` blocks to `compile`; extract and compile each block separately.
 
-The script uses the Throughline package installed in that project. It reports the number of frames on success, identifies invalid source and its line when available, and exits with an error on failure. Node.js 24+ is required. Always run it on the user's actual diagram after adapting an example.
+Read [flow syntax](references/grammar.md) for layouts, views, paths, and visibility. Read [API and validation](references/api-and-validation.md) for `tracer()`, diagnostics, limits, trace inspection, and tests.
 
-## Important rules
+## Start from a complete example
 
-- Declare nodes, links, and groups **before** the first `step`.
-- `set` changes a value. `focus` highlights it. `note` explains it. `send` shows movement along a link but **does not change** the destination's value.
-- Write values as JSON: `1`, `true`, `"ready"`, `[1,2]`, `{"ok":true}`. Do not write JavaScript expressions inside a diagram.
-- If the user needs a node or link to appear later, declare it as `hidden` and reveal it with `show`. Never send data along a hidden link.
-- Avoid two `set` commands that change the same target, or a target and its parent, within one step.
-- Keep each step focused on one understandable change. A note is not a state update.
-- Compile **one** `thl` block at a time. For a Markdown page with several blocks, extract and compile each block separately.
-- Do not pass raw source to `ThroughlinePlayer`. Pass a compiled `trace`, and do not recreate that trace during every React render.
+These standalone files are ready to copy and adapt:
 
-## Use the guide for the task
+- [Custom flow](assets/flow.thl)
+- [Reference bindings](assets/bindings.thl)
+- [Binary addition](assets/binary.thl)
+- [Matrix multiplication](assets/matrix.thl)
+- [Factorial call stack](assets/callstack.thl)
 
-All supporting instructions are included in this skill:
+Install the runtime in the consuming project with `npm install @0xbuff/throughline`. From that project's root, run the bundled validator against **each** completed diagram:
 
-- [Flow diagrams](references/grammar.md) — full syntax for custom diagrams, links, values, visibility, and common mistakes.
-- [Other diagram types](references/domains.md) — working examples and limits for `bindings`, `binary`, `matrix`, and `callstack`.
-- [Using Throughline in an app](references/integration.md) — installation, React, Next.js, Markdown/MDX, Fumadocs, CSS customization, and optional sound.
-- [API and troubleshooting](references/api-and-validation.md) — functions, types, errors, limits, and ways to check the result.
+```sh
+node <installed-skill-directory>/scripts/validate.mjs <diagram.thl>
+```
 
-## Finish the task
-
-Give the user the source or code needed for their actual project. Check the examples against the installed package when possible, and state clearly if execution or browser behavior was not verified.
+The [validator](scripts/validate.mjs) resolves the project's installed runtime, reports the frame count, and fails on invalid diagrams. For visual integrations, also check keyboard navigation, captions, controls, layout, and styles in the browser. State any checks that could not be run rather than implying success.
